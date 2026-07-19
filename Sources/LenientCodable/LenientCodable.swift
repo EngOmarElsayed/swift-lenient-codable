@@ -5,6 +5,9 @@
 //  Created by Omar Elsayed on 15/07/2026.
 //
 
+@_exported import LenientDecoding
+import Foundation
+
 /// # LenientCodable — macro declarations
 ///
 /// `@LenientDecodable` generates a `Decodable` conformance where **every stored

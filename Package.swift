@@ -34,11 +34,13 @@ let package = Package(
                 .product(name: "SwiftCompilerPlugin", package: "swift-syntax")
             ]
         ),
-        .target(name: "LenientCodable", dependencies: ["LenientCodableMacros"]),
+        .target(name: "LenientDecoding"),
+        .target(name: "LenientCodable", dependencies: ["LenientCodableMacros", "LenientDecoding"]),
         .executableTarget(name: "LenientCodableClient", dependencies: ["LenientCodable"]),
         .testTarget(
             name: "LenientCodableTests",
             dependencies: [
+                "LenientCodable",
                 "LenientCodableMacros",
                 .product(name: "SwiftSyntaxMacrosTestSupport", package: "swift-syntax"),
             ]

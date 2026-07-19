@@ -8,41 +8,41 @@ import XCTest
 #if canImport(LenientCodableMacros)
 import LenientCodableMacros
 
-let testMacros: [String: Macro.Type] = [
-    "stringify": StringifyMacro.self,
-]
+//let testMacros: [String: Macro.Type] = [
+//    "stringify": StringifyMacro.self,
+//]
 #endif
-
-final class LenientCodableTests: XCTestCase {
-    func testMacro() throws {
-        #if canImport(LenientCodableMacros)
-        assertMacroExpansion(
-            """
-            #stringify(a + b)
-            """,
-            expandedSource: """
-            (a + b, "a + b")
-            """,
-            macros: testMacros
-        )
-        #else
-        throw XCTSkip("macros are only supported when running tests for the host platform")
-        #endif
-    }
-
-    func testMacroWithStringLiteral() throws {
-        #if canImport(LenientCodableMacros)
-        assertMacroExpansion(
-            #"""
-            #stringify("Hello, \(name)")
-            """#,
-            expandedSource: #"""
-            ("Hello, \(name)", #""Hello, \(name)""#)
-            """#,
-            macros: testMacros
-        )
-        #else
-        throw XCTSkip("macros are only supported when running tests for the host platform")
-        #endif
-    }
-}
+//
+//final class LenientCodableTests: XCTestCase {
+//    func testMacro() throws {
+//        #if canImport(LenientCodableMacros)
+//        assertMacroExpansion(
+//            """
+//            #stringify(a + b)
+//            """,
+//            expandedSource: """
+//            (a + b, "a + b")
+//            """,
+//            macros: testMacros
+//        )
+//        #else
+//        throw XCTSkip("macros are only supported when running tests for the host platform")
+//        #endif
+//    }
+//
+//    func testMacroWithStringLiteral() throws {
+//        #if canImport(LenientCodableMacros)
+//        assertMacroExpansion(
+//            #"""
+//            #stringify("Hello, \(name)")
+//            """#,
+//            expandedSource: #"""
+//            ("Hello, \(name)", #""Hello, \(name)""#)
+//            """#,
+//            macros: testMacros
+//        )
+//        #else
+//        throw XCTSkip("macros are only supported when running tests for the host platform")
+//        #endif
+//    }
+//}
