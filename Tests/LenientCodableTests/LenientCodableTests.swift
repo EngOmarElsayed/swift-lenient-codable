@@ -1,3 +1,10 @@
+//
+//  LenientCodableTests.swift
+//  LenientCodable
+//
+//  Created by Omar Elsayed on 19/07/2026.
+//
+
 import SwiftSyntax
 import SwiftSyntaxBuilder
 import SwiftSyntaxMacros

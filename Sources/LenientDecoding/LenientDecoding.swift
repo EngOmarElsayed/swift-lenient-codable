@@ -24,7 +24,7 @@ public enum LenientDecoding {
         do {
             return try container.decodeIfPresent(T.self, forKey: key)
         } catch {
-            // Reporting hook: this catch is where the failure gets recorded.
+            LenientErrorLogger.log("decoded nil for '\(LenientErrorLogger.path(of: container, key: key))' — \(error)")
             return nil
         }
     }
@@ -49,17 +49,13 @@ public enum LenientDecoding {
             return []
         }
 
-        if (try? container.decodeNil(forKey: key)) == true {
-            // report that the value was nil
-            return []
-        }
+        if (try? container.decodeNil(forKey: key)) == true { return [] }
 
         guard var unKeyedContainer = try? container.nestedUnkeyedContainer(forKey: key) else {
-            // Wrong container shape ("offers": "hello").
-            // Reporting hook: containerFailed.
+            LenientErrorLogger.log("decoded [] for '\(LenientErrorLogger.path(of: container, key: key))' — value is not an array")
             return []
         }
-        return decodeNilPaddedElements(T.self, from: &unKeyedContainer)
+        return decodeNilPaddedElements(T.self, from: &unKeyedContainer, path: LenientErrorLogger.path(of: container, key: key))
     }
 
     /// @NilOnFailure on [T?]?
@@ -77,16 +73,13 @@ public enum LenientDecoding {
             return nil
         }
 
-        if (try? container.decodeNil(forKey: key)) == true {
-            // report that the value was nil
-            return nil
-        }
+        if (try? container.decodeNil(forKey: key)) == true { return nil }
 
         guard var unKeyedContainer = try? container.nestedUnkeyedContainer(forKey: key) else {
-            // Reporting hook: containerFailed.
+            LenientErrorLogger.log("decoded [] for '\(LenientErrorLogger.path(of: container, key: key))' — value is not an array")
             return nil
         }
-        return decodeNilPaddedElements(T.self, from: &unKeyedContainer)
+        return decodeNilPaddedElements(T.self, from: &unKeyedContainer, path: LenientErrorLogger.path(of: container, key: key))
     }
 
     /// @DropOnFailure on [T]
@@ -106,8 +99,9 @@ public enum LenientDecoding {
         guard container.contains(key) else { return [] }
         if (try? container.decodeNil(forKey: key)) == true { return [] }
 
+        let path = LenientErrorLogger.path(of: container, key: key)
         guard var unKeyedContainer = try? container.nestedUnkeyedContainer(forKey: key) else {
-            // Reporting hook: containerFailed.
+            LenientErrorLogger.log("decoded [] for '\(path)' — value is not an array")
             return []
         }
 
@@ -117,19 +111,22 @@ public enum LenientDecoding {
             do {
                 result.append(try unKeyedContainer.decode(T.self))
             } catch {
-                // Reporting hook: droppedElement(index:, underlying: error).
+                LenientErrorLogger.log("dropped element \(index) of '\(path)' — \(error)")
                 _ = try? unKeyedContainer.decode(AnyDecodableValue.self)
-                if unKeyedContainer.currentIndex == index { break }
+                if unKeyedContainer.currentIndex == index {
+                    LenientErrorLogger.log("cursor stuck at element \(index) of '\(path)' — remaining elements dropped")
+                    break
+                }
             }
         }
         return result
     }
 
     // MARK: Shared element loop
-
     private static func decodeNilPaddedElements<T: Decodable>(
         _ type: T.Type,
-        from unKeyedContainer: inout UnkeyedDecodingContainer
+        from unKeyedContainer: inout UnkeyedDecodingContainer,
+        path: String
     ) -> [T?] {
         var result: [T?] = []
         while !unKeyedContainer.isAtEnd {
@@ -138,11 +135,12 @@ public enum LenientDecoding {
             do {
                 result.append(try unKeyedContainer.decode(T.self))
             } catch {
-                // Reporting hook: nilPaddedElement(index:, underlying: error).
+                LenientErrorLogger.log("padded nil at element \(index) of '\(path)' — \(error)")
                 _ = try? unKeyedContainer.decode(AnyDecodableValue.self)
                 result.append(nil)
                 if unKeyedContainer.currentIndex == index {
-                    break // same safety valve as dropOnFailure
+                    LenientErrorLogger.log("cursor stuck at element \(index) of '\(path)' — remaining elements dropped")
+                    break
                 }
             }
         }

@@ -55,10 +55,10 @@ extension LenientDecodableMacro: ExtensionMacro {
        guard let structDec = declaration.as(StructDeclSyntax.self) else { return [] }
        let occurrences = structDec.lenientDecodableOccurrences()
        guard occurrences.count < 2 else { return [] }
-       guard !protocols.isEmpty else {
-           context.diagnose(Diagnostic(node: node, message: LenientDiagnostic.redundantConformance))
-           return []
-       }
+//       guard !protocols.isEmpty else {
+//           context.diagnose(Diagnostic(node: node, message: LenientDiagnostic.redundantConformance))
+//           return []
+//       }
 
        let decl: DeclSyntax =
            """
