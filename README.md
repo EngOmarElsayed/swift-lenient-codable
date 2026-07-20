@@ -1,5 +1,5 @@
 # LenientCodable
-
+[![](https://img.shields.io/endpoint?url=https%3A%2F%2Fswiftpackageindex.com%2Fapi%2Fpackages%2FEngOmarElsayed%2Fswift-lenient-codable%2Fbadge%3Ftype%3Dswift-versions)](https://swiftpackageindex.com/EngOmarElsayed/swift-lenient-codable)
 ![Swift](https://img.shields.io/badge/Swift-6.2+-F05138?logo=swift&logoColor=white)
 ![Platforms](https://img.shields.io/badge/Platforms-iOS%2013+%20|%20macOS%2010.15+%20|%20tvOS%2013+%20|%20watchOS%206+-blue)
 ![SPM](https://img.shields.io/badge/SPM-compatible-brightgreen)
