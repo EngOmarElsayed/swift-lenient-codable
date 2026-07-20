@@ -42,6 +42,7 @@ let package = Package(
             dependencies: [
                 "LenientCodable",
                 "LenientCodableMacros",
+                "LenientDecoding",
                 .product(name: "SwiftSyntaxMacrosTestSupport", package: "swift-syntax"),
             ]
         ),

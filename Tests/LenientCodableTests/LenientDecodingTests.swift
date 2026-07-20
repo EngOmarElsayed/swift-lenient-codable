@@ -7,7 +7,7 @@
 
 import Foundation
 import Testing
-@testable import LenientCodable
+@testable import LenientDecoding
 
 @Suite("LenientDecoding Tests")
 class LenientDecodingTests {

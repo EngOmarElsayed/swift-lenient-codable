@@ -59,10 +59,10 @@ public macro LenientDecodable() = #externalMacro(
 /// Nil where it broke. Never fails the decode.
 ///
 /// Valid shapes and behavior:
-/// - `T?` — missing key / JSON `null` → `nil` (silent); any decoding failure →
-///   `nil` (reported).
-/// - `[T?]` — missing key / `null` → `[]` (silent); wrong container shape →
-///   `[]` (reported); a `null` element → `nil` in place (silent, intentional
+/// - `T?` — missing key → `nil` (reported); JSON `null` → `nil` (silent,
+///   intentional null); any decoding failure → `nil` (reported).
+/// - `[T?]` — missing key → `[]` (reported); `null` → `[]` (silent); wrong
+///   container shape → `[]` (reported); a `null` element → `nil` in place (silent, intentional
 ///   null is not an error); a malformed element → `nil` in place (reported with
 ///   its index). Count and positions are preserved: use
 ///   `values.count != values.compactMap { $0 }.count` as a one-line
@@ -86,7 +86,8 @@ public macro NilOnFailure() = #externalMacro(
 /// Pretend it wasn't there. Applies to `[T]` (non-optional array, non-optional
 /// elements) only. Never fails the decode.
 ///
-/// - Missing key / JSON `null` → `[]` (silent).
+/// - Missing key → `[]` (reported).
+/// - JSON `null` → `[]` (silent, intentional null).
 /// - Wrong container shape → `[]` (reported).
 /// - A failed element — for any reason: unknown case inside it, missing
 ///   required field, `null`, wrong shape — → removed from the result (reported
