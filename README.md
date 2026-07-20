@@ -18,7 +18,7 @@ struct ApplicationResponse {
     @DropOnFailure var offers: [Offer]         // failed elements → removed
 }
 
-let response = try JSONDecoder().decode(LendingApplicationResponse.self, from: data)
+let response = try JSONDecoder().decode(ApplicationResponse.self, from: data)
 ```
 
 - [The Problem](#the-problem)
@@ -84,9 +84,9 @@ struct ApplicationResponse {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         self.applicationId = try container.decode(String.self, forKey: .applicationId)
         // implicit @NilOnFailure (applied by @LenientDecodable)
-        self.status = LenientDecoding.nilOnFailure(ApplicationStatus.self, in: container, forKey: .status, decoder: decoder)
+        self.status = LenientDecoding.nilOnFailure(Status.self, in: container, forKey: .status, decoder: decoder)
         self.documents = LenientDecoding.nilPadding(Document.self, in: container, forKey: .documents, decoder: decoder)
-        self.offers = LenientDecoding.dropOnFailure(LoanOffer.self, in: container, forKey: .offers, decoder: decoder)
+        self.offers = LenientDecoding.dropOnFailure(Offer.self, in: container, forKey: .offers, decoder: decoder)
     }
 }
 
