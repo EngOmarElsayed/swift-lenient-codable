@@ -43,7 +43,7 @@ Swift's synthesized `Codable` decoding is all-or-nothing. One surprise anywhere 
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/EngOmarElsayed/LenientCodable.git", from: "0.1.0"),
+    .package(url: "https://github.com/EngOmarElsayed/swift-lenient-codable.git", from: "1.0.0"),
 ]
 ```
 
