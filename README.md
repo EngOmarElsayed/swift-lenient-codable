@@ -11,11 +11,11 @@ Swift macros for resilient `Codable` — one unknown enum case or malformed arra
 import LenientCodable
 
 @LenientDecodable
-struct LendingApplicationResponse {
+struct ApplicationResponse {
     @Strict var applicationId: String              // decode fails if this fails
-    var status: ApplicationStatus?                 // lenient by default: nil on any failure
+    var status: Status?                 // lenient by default: nil on any failure
     @NilOnFailure var documents: [Document?]       // failed elements → nil in place
-    @DropOnFailure var offers: [LoanOffer]         // failed elements → removed
+    @DropOnFailure var offers: [Offer]         // failed elements → removed
 }
 
 let response = try JSONDecoder().decode(LendingApplicationResponse.self, from: data)
