@@ -3,7 +3,7 @@
 ![Swift](https://img.shields.io/badge/Swift-6.2+-F05138?logo=swift&logoColor=white)
 ![Platforms](https://img.shields.io/badge/Platforms-iOS%2013+%20|%20macOS%2010.15+%20|%20tvOS%2013+%20|%20watchOS%206+-blue)
 ![SPM](https://img.shields.io/badge/SPM-compatible-brightgreen)
-![License](https://img.shields.io/badge/License-MIT-lightgrey)
+![License](https://img.shields.io/badge/License-MIT-green)
 
 Swift macros for resilient `Codable` — one unknown enum case or malformed array element no longer fails your whole response. Lenient by default, strict by explicit opt-in, with compile-time diagnostics and fix-its.
 
