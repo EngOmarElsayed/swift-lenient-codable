@@ -67,11 +67,11 @@ That last row is the design's core guarantee: **nothing is silently strict and n
 No hidden runtime magic: right-click → *Expand Macro* shows exactly what was generated. For the struct at the top of this page:
 
 ```swift
-struct LendingApplicationResponse {
+struct ApplicationResponse {
     var applicationId: String
-    var status: ApplicationStatus?
+    var status: Status?
     var documents: [Document?]
-    var offers: [LoanOffer]
+    var offers: [Offer]
 
     private enum CodingKeys: String, CodingKey {
         case applicationId
@@ -90,7 +90,7 @@ struct LendingApplicationResponse {
     }
 }
 
-extension LendingApplicationResponse: Decodable {}
+extension ApplicationResponse: Decodable {}
 ```
 
 Three things to notice: `@Strict` properties compile to plain `try container.decode` — the only lines that can throw; implicitly-lenient properties carry a provenance comment so expanded code shows *why* they're lenient; and the lenient helpers are ordinary public functions in the `LenientDecoding` module, callable from a hand-written `init(from:)` if you ever need to mix approaches manually.
