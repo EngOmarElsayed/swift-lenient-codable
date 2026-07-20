@@ -11,7 +11,43 @@ import SwiftSyntaxBuilder
 import SwiftSyntaxMacros
 import SwiftDiagnostics
 
+/// The implementation of `@LenientDecodable` — the type-level macro that
+/// turns a struct's property shapes and marker annotations into a lenient
+/// `Decodable` conformance.
+///
+/// The macro plays two attached roles on the same struct:
+///
+/// - **`MemberMacro`** generates the members: a `CodingKeys` enum (unless
+///   the struct declares its own) and the `init(from:)` whose body is one
+///   decoding line per stored property.
+/// - **`ExtensionMacro`** adds the `extension T: Decodable {}` conformance.
+///
+/// All validation lives here, in the member expansion's pipeline — the
+/// marker annotations themselves are inert (`MarkerMacro`), and this is the
+/// only place with the whole-struct view the rules need:
+///
+/// 1. `filterProperties` — collect the decodable stored properties, skipping
+///    statics, computed properties, and initialized `let`s.
+/// 2. `resolveStrategies` — read each property's marker annotation into a
+///    `StoredPropertyStrategy`; unannotated properties default to implicit
+///    `@NilOnFailure`.
+/// 3. `validateShapes` — cross strategy with the declared `TypeShape` and
+///    produce a `DecodingPlan` per property, or diagnostics with fix-its.
+/// 4. `resolveCodingKeys` + `buildInitFromDecoder` — render the members.
+///
+/// Any diagnosed error makes the expansion return no members: the macro
+/// never generates code for a struct it has complained about.
 public struct LenientDecodableMacro: MemberMacro  {
+    /// Generates `CodingKeys` and `init(from:)` for the attached struct by
+    /// running the four-stage pipeline described on the type.
+    ///
+    /// Two structural checks run before the pipeline: the declaration must
+    /// be a struct (`structsOnly` otherwise, anchored at the attribute), and
+    /// `@LenientDecodable` must appear only once (`duplicateAttribute`,
+    /// anchored at the last occurrence). `resolveStrategies` and
+    /// `validateShapes` report failure through their `Bool` return after
+    /// diagnosing every offending property — so a struct with three bad
+    /// properties gets three diagnostics from one compile.
     public static func expansion(
         of node: SwiftSyntax.AttributeSyntax,
         providingMembersOf declaration: some SwiftSyntax.DeclGroupSyntax,
@@ -45,6 +81,16 @@ public struct LenientDecodableMacro: MemberMacro  {
 
 // MARK: - LenientDecodableMacro ExtensionMacro
 extension LenientDecodableMacro: ExtensionMacro {
+   /// Adds `extension T: Decodable {}` for the attached struct.
+   ///
+   /// The structural early-outs mirror the member expansion's, but *silently*
+   /// — the member role has already anchored the `structsOnly` /
+   /// `duplicateAttribute` diagnostics, and repeating them here would double
+   /// every error.
+   ///
+   /// The `protocols` guard emits the `redundantConformance` warning when
+   /// the conformance the macro would add is pointless.
+   ///
    public static func expansion(
        of node: SwiftSyntax.AttributeSyntax,
        attachedTo declaration: some SwiftSyntax.DeclGroupSyntax,
@@ -71,6 +117,19 @@ extension LenientDecodableMacro: ExtensionMacro {
 
 // MARK: - Private LenientDecodableMacro methods
 private extension LenientDecodableMacro {
+   /// Stage 1: walks the member block and collects one `StoredProperty` per
+   /// decodable stored property.
+   ///
+   /// Skipped without diagnostics (never decoded, so never wrong): static
+   /// properties, computed properties, and `let`s with an initializer (their
+   /// value is fixed; assigning in `init(from:)` would not compile).
+   ///
+   /// Two member shapes are errors, not skips: a hand-written `init(from:)`
+   /// (would collide with the generated one — `handWrittenInitFromDecoder`,
+   /// anchored at the initializer) and a stored `var` without a type
+   /// annotation (`var x = 0` — macros see syntax, not inferred types;
+   /// `missingTypeAnnotation` with a `<#Type#>` fix-it). Both return an
+   /// empty list immediately.
    static func filterProperties(structDec: StructDeclSyntax, in context: some MacroExpansionContext) -> [StoredProperty] {
        var properties: [StoredProperty] = []
        memberLoop: for member in structDec.memberBlock.members {
@@ -111,6 +170,17 @@ private extension LenientDecodableMacro {
        return properties
    }
 
+   /// Stage 2: writes each property's `strategy` from its marker
+   /// annotations.
+   ///
+   /// Zero annotations → the `@LenientDecodable` default,
+   /// `.nilOnFailure(implicit: true)`. Exactly one → its
+   /// `MarkerAnnotation.strategy`. Two or more → `multipleAnnotations`,
+   /// anchored at the second annotation and listing all of them.
+   ///
+   /// - Returns: `false` if any property was diagnosed — but only after
+   ///   *every* property has been visited, so all conflicts surface in one
+   ///   compile.
    static func resolveStrategies(
        for properties: inout [StoredProperty],
        in context: some MacroExpansionContext
@@ -138,6 +208,22 @@ private extension LenientDecodableMacro {
        return !hadError
    }
 
+   /// Stage 3: executes the strategy × shape matrix — every valid
+   /// combination writes the property's `DecodingPlan`, every invalid one
+   /// emits a `LenientDiagnostic` with fix-its from both families (reshape
+   /// the type, or switch the annotation via `annotationFixIt`).
+   ///
+   /// The full matrix, including which plan or diagnostic each cell
+   /// produces, is documented on `DecodingPlan`. Longhand types
+   /// (`Optional<T>`, `Array<T>`) short-circuit to `sugarSyntaxRequired`
+   /// before any strategy is considered.
+   ///
+   /// Diagnostics anchor at the property's annotation when one was written,
+   /// else at the type annotation — an implicit-strategy error should point
+   /// at the type, not at an attribute the user never wrote.
+   ///
+   /// - Returns: `false` if any property was diagnosed; like stage 2, it
+   ///   visits every property first.
    static func validateShapes(
        for properties: inout [StoredProperty],
        in context: some MacroExpansionContext
@@ -264,6 +350,11 @@ private extension LenientDecodableMacro {
        return !hadError
    }
 
+   /// Stage 4a: builds the `private enum CodingKeys: String, CodingKey`
+   /// declaration with one case per collected property — or returns `nil`
+   /// when the struct already declares a `CodingKeys` enum or typealias
+   /// (`hasCodingKeysEnum()`), deferring to the user's key mapping. The
+   /// generated `init(from:)` references `CodingKeys` by name either way.
    static func resolveCodingKeys(
        in structDecl: StructDeclSyntax,
        for properties: [StoredProperty]
@@ -285,6 +376,19 @@ private extension LenientDecodableMacro {
        return keysDecl
    }
 
+   /// Stage 4b: renders the `init(from:)` declaration.
+   ///
+   /// The body is the container line followed by each property's
+   /// `DecodingPlan.decodingLine(name:)`, preceded by the provenance comment
+   /// for implicitly-lenient properties
+   /// (`StoredPropertyStrategy.shouldAddProvenanceComment()`). The
+   /// initializer inherits the struct's access level via `accessPrefix()` —
+   /// a `public` struct needs a `public init(from:)` to be decodable outside
+   /// its module.
+   ///
+   /// Only reached when every property holds a plan (the pipeline gates
+   /// guarantee it); the `guard let plan` inside is belt-and-braces, not a
+   /// reachable path.
    static func buildInitFromDecoder(
        for properties: [StoredProperty],
        structDecl: StructDeclSyntax
@@ -314,6 +418,11 @@ private extension LenientDecodableMacro {
        )
    }
 
+    /// Builds the "switch strategy" fix-it for a shape error, picking the
+    /// right edit for the annotation's provenance: an explicit annotation is
+    /// rewritten in place (`replaceAnnotation`), an implicit strategy has no
+    /// node to rewrite so the new annotation is prepended to the declaration
+    /// (`addAnnotation`).
     static func annotationFixIt(_ name: String, annotationNode: AttributeSyntax?, sourceDecl: VariableDeclSyntax) -> FixIt? {
         if let annotationNode {
             return LenientFixItHelperMethods.replaceAnnotation(annotationNode, with: name)
