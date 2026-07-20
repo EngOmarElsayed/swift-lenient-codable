@@ -5,7 +5,6 @@
 //  Created by Omar Elsayed on 15/07/2026.
 //
 
-import SwiftCompilerPlugin
 import SwiftSyntax
 import SwiftSyntaxBuilder
 import SwiftSyntaxMacros
